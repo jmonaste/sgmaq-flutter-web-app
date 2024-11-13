@@ -11,6 +11,22 @@ import 'dart:io'; // Para File
 import 'package:flutter/foundation.dart'; // Para kIsWeb
 import 'package:http_parser/http_parser.dart'; // Para MediaType
 
+
+class VehicleRegistration {
+  final DateTime date;
+  final int count;
+
+  VehicleRegistration({required this.date, required this.count});
+
+  factory VehicleRegistration.fromJson(Map<String, dynamic> json) {
+    return VehicleRegistration(
+      date: DateTime.parse(json['date']),
+      count: json['count'],
+    );
+  }
+}
+
+
 class ApiService {
   final AuthService _authService;
   late final Dio dio;
@@ -522,6 +538,56 @@ class ApiService {
       throw Exception('Error en la solicitud: $e');
     }
   }
+
+
+
+  // Método para obtener el recuento de vehículos
+  Future<int> getVehicleCount() async {
+    try {
+      final response = await dio.get('/api/dashboard/vehicles/count');
+      return response.data['count'] as int;
+    } catch (e) {
+      print('Error in getVehicleCount: $e');
+      rethrow;
+    }
+  }
+
+  // Método para obtener el recuento de vehículos en curso
+  Future<int> getVehiclesInProcessCount() async {
+    try {
+      final response = await dio.get('/api/dashboard/vehicles/non-final-status');
+      return response.data['count'] as int;
+    } catch (e) {
+      print('Error in getVehiclesInProcessCount: $e');
+      rethrow;
+    }
+  }
+
+
+
+
+
+
+  // Método para obtener los registros de vehículos por fecha
+    Future<List<Map<String, dynamic>>> getVehicleRegistrationsByDate() async {
+      try {
+        final response = await dio.get('/api/dashboard/vehicles/registrations-by-date');
+        return List<Map<String, dynamic>>.from(response.data);
+      } catch (e) {
+        print('Error in getVehicleRegistrationsByDate: $e');
+        rethrow;
+      }
+    }
+
+
+
+
+
+
+
+
+
+
 
 
 }

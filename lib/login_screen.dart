@@ -59,114 +59,137 @@ class _LoginScreenState extends State<LoginScreen> {
   Widget build(BuildContext context) {
     double screenHeight = MediaQuery.of(context).size.height;
 
+    // Definir una paleta de colores más sobria
+    final Color primaryColor = Colors.grey[800]!;
+    final Color accentColor = Colors.blueAccent;
+    final Color backgroundColor = Colors.white;
+    final Color textFieldBackground = Colors.grey[200]!;
+
     return Scaffold(
-      backgroundColor: Color(0xFFF2F2F2),
-      body: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        child: ListView(
-          children: [
-            SizedBox(height: screenHeight * .12),
-            const Text(
-              'Bienvenido,',
-              style: TextStyle(
-                fontSize: 28,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF262626),
-              ),
-            ),
-            SizedBox(height: screenHeight * .01),
-            Text(
-              'Inicia sesión para continuar',
-              style: TextStyle(
-                fontSize: 18,
-                color: Color(0xFF262626).withOpacity(.6),
-              ),
-            ),
-            SizedBox(height: screenHeight * .12),
-            TextField(
-              controller: _usernameController,
-              style: TextStyle(color: Color(0xFFA64F03)), // Color del texto introducido
-              decoration: InputDecoration(
-                labelText: 'Nombre de usuario',
-                labelStyle: TextStyle(color: Color(0xFFA64F03)),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFA64F03)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFA64F03)),
-                ),
-              ),
-            ),
-            SizedBox(height: screenHeight * .025),
-            TextField(
-              controller: _passwordController,
-              obscureText: true,
-              style: TextStyle(color: Color(0xFFA64F03)), // Color del texto introducido
-              decoration: InputDecoration(
-                labelText: 'Contraseña',
-                labelStyle: TextStyle(color: Color(0xFFA64F03)),
-                border: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFA64F03)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFFA64F03)),
-                ),
-              ),
-            ),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton(
-                onPressed: () {},
-                child: const Text(
-                  '¿Olvidaste tu contraseña?',
+      backgroundColor: backgroundColor,
+      body: Center(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 400), // Limitar el ancho máximo
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24), // Aumentar el padding horizontal
+            child: ListView(
+              shrinkWrap: true, // Ajustar la altura del ListView al contenido
+              children: [
+                SizedBox(height: screenHeight * .12),
+                Text(
+                  'Bienvenido,',
                   style: TextStyle(
-                    color: Color(0xFF262626),
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                    color: primaryColor,
                   ),
+                  textAlign: TextAlign.center, // Centrar el texto
                 ),
-              ),
-            ),
-            SizedBox(
-              height: screenHeight * .075,
-            ),
-            ElevatedButton(
-              onPressed: _login,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Color(0xFFF2CB05),
-                padding: EdgeInsets.symmetric(vertical: 15),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+                SizedBox(height: screenHeight * .01),
+                Text(
+                  'Inicia sesión para continuar',
+                  style: TextStyle(
+                    fontSize: 18,
+                    color: primaryColor.withOpacity(.6),
+                  ),
+                  textAlign: TextAlign.center, // Centrar el texto
                 ),
-              ),
-              child: Text(
-                'Iniciar sesión',
-                style: TextStyle(
-                  color: Color(0xFF262626),
-                  fontSize: 16,
+                SizedBox(height: screenHeight * .08),
+                TextField(
+                  controller: _usernameController,
+                  decoration: InputDecoration(
+                    labelText: 'Nombre de usuario',
+                    labelStyle: TextStyle(color: Colors.blueAccent), // Color del texto del label
+                    filled: true,
+                    fillColor: textFieldBackground,
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey), // Color del borde
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: accentColor),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  style: TextStyle(color: Colors.blueAccent), // Color del texto que introduce el usuario
                 ),
-              ),
-            ),
-            SizedBox(
-              height: screenHeight * .15,
-            ),
-            TextButton(
-              onPressed: () {},
-              child: RichText(
-                text: const TextSpan(
-                  text: 'Soy un nuevo usuario, ',
-                  style: TextStyle(color: Color(0xFF262626)),
-                  children: [
-                    TextSpan(
-                      text: 'Regístrate',
+                SizedBox(height: screenHeight * .02),
+                TextField(
+                  controller: _passwordController,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Contraseña',
+                    labelStyle: TextStyle(color: Colors.blueAccent), // Color del texto del label
+                    filled: true,
+                    fillColor: textFieldBackground,
+                    border: OutlineInputBorder(
+                      borderSide: BorderSide(color: Colors.grey), // Color del borde
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderSide: BorderSide(color: accentColor),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  style: TextStyle(color: Colors.blueAccent), // Color del texto que introduce el usuario
+                ),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {},
+                    child: Text(
+                      '¿Olvidaste tu contraseña?',
                       style: TextStyle(
-                        color: Color(0xFFA64F03),
-                        fontWeight: FontWeight.bold,
+                        color: accentColor,
                       ),
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                SizedBox(
+                  height: screenHeight * .05,
+                ),
+                ElevatedButton(
+                  onPressed: _login,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: primaryColor,
+                    padding: EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Iniciar sesión',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                SizedBox(
+                  height: screenHeight * .1,
+                ),
+                TextButton(
+                  onPressed: () {},
+                  child: RichText(
+                    textAlign: TextAlign.center, // Centrar el texto
+                    text: TextSpan(
+                      text: 'Soy un nuevo usuario, ',
+                      style: TextStyle(color: primaryColor),
+                      children: [
+                        TextSpan(
+                          text: 'Regístrate',
+                          style: TextStyle(
+                            color: accentColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
