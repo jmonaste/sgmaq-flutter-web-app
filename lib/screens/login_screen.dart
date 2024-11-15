@@ -39,17 +39,13 @@ class LoginScreenState extends State<LoginScreen> {
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
       );
-    } on DioException catch (e) {
-      if (e.response?.statusCode == 401) {
-        setState(() {
-          _errorMessage = LoginStrings.incorrectUsernameOrPassword;
-        });
-      } else {
-        DialogHelper.showErrorDialog(context, '${LoginStrings.loginError} $e');
-      }
     } catch (e) {
-      // Manejar errores inesperados
-      DialogHelper.showErrorDialog(context, '${LoginStrings.unexpectedError} $e');
+      setState(() {
+        print(e);
+        _errorMessage = e.toString().contains('Incorrect username or password')
+            ? LoginStrings.incorrectUsernameOrPassword
+            : '${LoginStrings.loginError} $e';
+      });
     } finally {
       setState(() {
         _isLoading = false;
