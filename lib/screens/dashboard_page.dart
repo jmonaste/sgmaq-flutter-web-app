@@ -1,7 +1,7 @@
 // FILE: dashboard_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'api_service.dart'; // Asegúrate de importar tu servicio API
+import '../services/api_service.dart'; // Asegúrate de importar tu servicio API
 import 'package:fl_chart/fl_chart.dart';
 
 class DashboardPage extends StatefulWidget {

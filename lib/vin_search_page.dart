@@ -7,10 +7,10 @@ import 'package:provider/provider.dart'; // Importa Provider
 import 'package:dio/dio.dart'; // Importa Dio
 import 'package:image_picker/image_picker.dart';
 import 'package:http_parser/http_parser.dart'; // Importa HttpParser si es necesario
-import 'api_service.dart'; // Importa ApiService
-import 'custom_drawer.dart'; // Importa CustomDrawer
-import 'custom_footer.dart'; // Importa CustomFooter
-import 'home_page.dart'; // Importa HomePage para la navegación de "Inicio"
+import 'services/api_service.dart'; // Importa ApiService
+import 'widgets/custom_drawer.dart'; // Importa CustomDrawer
+import 'widgets/custom_footer.dart'; // Importa CustomFooter
+import 'screens/home_page.dart'; // Importa HomePage para la navegación de "Inicio"
 import 'camera_page.dart';
 import 'vehicle_detail_page.dart'; // Importa la página de detalle del vehículo
 

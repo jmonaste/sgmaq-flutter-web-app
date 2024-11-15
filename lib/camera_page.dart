@@ -3,9 +3,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
-import 'api_service.dart';
-import 'custom_footer.dart';
-import 'home_page.dart';
+import 'services/api_service.dart';
+import 'widgets/custom_footer.dart';
+import 'screens/home_page.dart';
 
 class CameraPage extends StatefulWidget {
   @override

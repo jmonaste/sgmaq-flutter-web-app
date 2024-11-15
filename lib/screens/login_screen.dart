@@ -1,37 +1,55 @@
+// lib/login_screen.dart
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'auth_service.dart';
+import '../services/auth_service.dart';
+import '../utils/dialogs.dart';
+import '../utils/strings.dart';
 import 'home_page.dart';
 
 class LoginScreen extends StatefulWidget {
   @override
-  _LoginScreenState createState() => _LoginScreenState();
+  LoginScreenState createState() => LoginScreenState();
 }
 
-class _LoginScreenState extends State<LoginScreen> {
+class LoginScreenState extends State<LoginScreen> {
+
   final TextEditingController _usernameController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _isLoading = false;
+  String? _errorMessage;
 
   void _login() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
     String username = _usernameController.text.trim();
     String password = _passwordController.text.trim();
+
     if (username.isEmpty || password.isEmpty) {
-      _showErrorDialog('Por favor, introduzca tanto el nombre de usuario como la contraseña.');
+      DialogHelper.showErrorDialog(context, LoginStrings.usernameOrPasswordEmpty);
       return;
     }
     setState(() {
       _isLoading = true;
+      _errorMessage = null;
     });
-    final authService = Provider.of<AuthService>(context, listen: false);
+
     try {
       await authService.login(username, password);
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
       );
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        setState(() {
+          _errorMessage = LoginStrings.incorrectUsernameOrPassword;
+        });
+      } else {
+        DialogHelper.showErrorDialog(context, '${LoginStrings.loginError} $e');
+      }
     } catch (e) {
-      _showErrorDialog('Error al iniciar sesión: $e');
+      // Manejar errores inesperados
+      DialogHelper.showErrorDialog(context, '${LoginStrings.unexpectedError} $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -39,21 +57,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  void _showErrorDialog(String message) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Error'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +99,20 @@ class _LoginScreenState extends State<LoginScreen> {
                   textAlign: TextAlign.center, // Centrar el texto
                 ),
                 SizedBox(height: screenHeight * .08),
+                // Mostrar el mensaje de error si existe
+                if (_errorMessage != null) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: Text(
+                      _errorMessage!,
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontSize: 14,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
                 TextField(
                   controller: _usernameController,
                   decoration: InputDecoration(
@@ -149,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: screenHeight * .05,
                 ),
                 ElevatedButton(
-                  onPressed: _login,
+                  onPressed: _isLoading ? null : _login,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: primaryColor,
                     padding: EdgeInsets.symmetric(vertical: 15),
@@ -157,13 +175,22 @@ class _LoginScreenState extends State<LoginScreen> {
                       borderRadius: BorderRadius.circular(8),
                     ),
                   ),
-                  child: Text(
-                    'Iniciar sesión',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                            strokeWidth: 2.0,
+                          ),
+                        )
+                      : Text(
+                          'Iniciar sesión',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                          ),
+                        ),
                 ),
                 SizedBox(
                   height: screenHeight * .1,

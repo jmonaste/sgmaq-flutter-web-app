@@ -1,10 +1,10 @@
 // lib/api_service.dart
-import 'constants.dart'; // Importa baseUrl
+import '../utils/constants.dart'; // Importa baseUrl
 import 'package:dio/dio.dart';
 import 'auth_service.dart';
 import 'package:flutter/material.dart';
-import 'login_screen.dart';
-import 'main.dart'; // Para acceder al navigatorKey
+import '../screens/login_screen.dart';
+import '../main.dart'; // Para acceder al navigatorKey
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'dart:typed_data'; // Para Uint8List
 import 'dart:io'; // Para File

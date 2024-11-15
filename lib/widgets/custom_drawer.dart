@@ -1,13 +1,13 @@
 // lib/custom_drawer.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'api_service.dart';
-import 'login_screen.dart';
-import 'home_page.dart';
-import 'vehicle_type_list.dart';
-import 'manage_vehicle_models.dart';
-import 'manage_vehicle_brand.dart';
-import 'camera_page.dart';
+import '../services/api_service.dart';
+import '../screens/login_screen.dart';
+import '../screens/home_page.dart';
+import '../vehicle_type_list.dart';
+import '../manage_vehicle_models.dart';
+import '../manage_vehicle_brand.dart';
+import '../camera_page.dart';
 
 class CustomDrawer extends StatelessWidget {
   final String userName;

@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'dashboard_page.dart'; // Importa el nuevo archivo
 import 'types_page.dart'; // Importa el nuevo archivo types_page.dart
-import 'brands_page.dart'; // Importa el nuevo archivo brands_page.dart
+import '../brands_page.dart'; // Importa el nuevo archivo brands_page.dart
 import 'models_page.dart'; // Importa el nuevo archivo models_page.dart
 
 class HomePage extends StatefulWidget {
