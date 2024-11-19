@@ -1,7 +1,7 @@
 // FILE: brands_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'services/api_service.dart'; // Asegúrate de importar tu servicio API
+import '../services/api_service.dart'; // Asegúrate de importar tu servicio API
 
 class BrandsPage extends StatefulWidget {
   @override
@@ -11,6 +11,8 @@ class BrandsPage extends StatefulWidget {
 class _BrandsPageState extends State<BrandsPage> {
   List<Map<String, dynamic>> _brands = [];
   bool _isLoading = true;
+  int _currentPage = 1;
+  final int _limit = 10;
 
   @override
   void initState() {
@@ -18,19 +20,23 @@ class _BrandsPageState extends State<BrandsPage> {
     _fetchBrands();
   }
 
-  Future<void> _fetchBrands() async {
+  Future<void> _fetchBrands({int page = 1}) async {
     final apiService = Provider.of<ApiService>(context, listen: false);
     try {
-      final brands = await apiService.getVehicleBrands();
+      final skip = (page - 1) * _limit;
+      final brands = await apiService.getVehicleBrands(skip: skip, limit: _limit);
       setState(() {
-        _brands = brands;
+        if (page == 1) {
+          _brands = brands;
+        } else {
+          _brands = brands; // Reemplaza la lista por la página solicitada
+        }
         _isLoading = false;
       });
     } catch (e) {
       setState(() {
         _isLoading = false;
       });
-      // Manejar el error apropiadamente
       print('Error fetching vehicle brands: $e');
     }
   }
@@ -59,6 +65,8 @@ class _BrandsPageState extends State<BrandsPage> {
   @override
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
+    final double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: AppBar(
         title: Text(
@@ -68,86 +76,114 @@ class _BrandsPageState extends State<BrandsPage> {
         backgroundColor: Colors.white,
         elevation: 0, // Eliminamos la sombra para un diseño más plano
         iconTheme: IconThemeData(color: Colors.black), // Iconos en negro
-        actions: [
-          IconButton(
-            icon: Icon(Icons.add),
-            onPressed: () async {
-              final newBrand = await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => BrandFormPage()),
-              );
-              if (newBrand != null) {
-                _addBrand(newBrand);
-              }
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final newBrand = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => BrandFormPage()),
+          );
+          if (newBrand != null) {
+            _addBrand(newBrand);
+          }
+        },
+        backgroundColor: Colors.blueAccent,
+        child: Icon(Icons.add),
+      ),
+      backgroundColor: Colors.grey[100],
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: _brands.length,
+                    itemBuilder: (context, index) {
+                      final brand = _brands[index];
+                      final isEven = index % 2 == 0;
+                      return Container(
+                        color: isEven ? Colors.white : Colors.grey[200],
+                        child: ListTile(
+                          title: Text(
+                            brand['name'],
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(Icons.edit, color: Colors.blueAccent),
+                                onPressed: () async {
+                                  final updatedBrand = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) =>
+                                          BrandFormPage(brand: brand),
+                                    ),
+                                  );
+                                  if (updatedBrand != null) {
+                                    _updateBrand(updatedBrand);
+                                  }
+                                },
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () async {
+                                  await apiService.deleteVehicleBrand(brand['id']);
+                                  _deleteBrand(brand['id']);
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                _buildPagination(),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildPagination() {
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(
+            onPressed: _currentPage > 1
+                ? () {
+                    setState(() {
+                      _currentPage--;
+                      _fetchBrands(page: _currentPage);
+                    });
+                  }
+                : null,
+            child: Text('Anterior'),
+          ),
+          SizedBox(width: 16),
+          Text(
+            'Página $_currentPage',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(width: 16),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _currentPage++;
+                _fetchBrands(page: _currentPage);
+              });
             },
+            child: Text('Siguiente'),
           ),
         ],
       ),
-      backgroundColor: Colors.grey[100], // Fondo gris claro
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: _brands.isEmpty
-                  ? Center(
-                      child: Text(
-                        'No hay marcas de vehículos disponibles.',
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    )
-                  : ListView.builder(
-                      itemCount: _brands.length,
-                      itemBuilder: (context, index) {
-                        final brand = _brands[index];
-                        return Card(
-                          color: Colors.white,
-                          elevation: 1,
-                          margin: const EdgeInsets.symmetric(vertical: 8.0),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: ListTile(
-                            title: Text(
-                              brand['name'],
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon:
-                                      Icon(Icons.edit, color: Colors.blueAccent),
-                                  onPressed: () async {
-                                    final updatedBrand = await Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            BrandFormPage(brand: brand),
-                                      ),
-                                    );
-                                    if (updatedBrand != null) {
-                                      _updateBrand(updatedBrand);
-                                    }
-                                  },
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete, color: Colors.red),
-                                  onPressed: () async {
-                                    await apiService
-                                        .deleteVehicleBrand(brand['id']);
-                                    _deleteBrand(brand['id']);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
     );
   }
 }
@@ -182,13 +218,13 @@ class _BrandFormPageState extends State<BrandFormPage> {
           style: TextStyle(color: Colors.black),
         ),
         backgroundColor: Colors.white,
-        elevation: 0, // Eliminamos la sombra
-        iconTheme: IconThemeData(color: Colors.black), // Iconos en negro
+        elevation: 0,
+        iconTheme: IconThemeData(color: Colors.black),
       ),
-      backgroundColor: Colors.grey[100], // Fondo gris claro
+      backgroundColor: Colors.grey[100],
       body: SingleChildScrollView(
         child: Padding(
-          padding: EdgeInsets.all(24.0), // Más espacio alrededor del formulario
+          padding: EdgeInsets.all(24.0),
           child: Form(
             key: _formKey,
             child: Column(
@@ -268,7 +304,7 @@ class _BrandFormPageState extends State<BrandFormPage> {
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                      ),                            
+                      ),
                       child: _isSaving
                           ? SizedBox(
                               width: 24,

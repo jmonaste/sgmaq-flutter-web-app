@@ -373,10 +373,12 @@ class ApiService {
 
 
 
-  // Método para obtener las marcas de vehículos
-  Future<List<Map<String, dynamic>>> getVehicleBrands() async {
+
+
+  // Método para obtener las marcas de vehículos con paginación
+  Future<List<Map<String, dynamic>>> getVehicleBrands({int skip = 0, int limit = 10}) async {
     try {
-      final response = await dio.get('/api/brands', queryParameters: {'skip': 0, 'limit': 10});
+      final response = await dio.get('/api/brands', queryParameters: {'skip': skip, 'limit': limit});
       return List<Map<String, dynamic>>.from(response.data);
     } catch (e) {
       print('Error in getVehicleBrands: $e');
