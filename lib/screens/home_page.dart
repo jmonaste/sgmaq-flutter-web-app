@@ -1,9 +1,14 @@
 // FILE: home_page.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_application_sgmaq/screens/login_screen.dart';
+import 'package:flutter_application_sgmaq/services/auth_service.dart';
 import 'dashboard_page.dart'; // Importa el nuevo archivo
 import 'types_page.dart'; // Importa el nuevo archivo types_page.dart
 import 'brands_page.dart'; // Importa el nuevo archivo brands_page.dart
 import 'models_page.dart'; // Importa el nuevo archivo models_page.dart
+import 'package:provider/provider.dart';
+import '../services/api_service.dart'; // Asegúrate de importar tu servicio API
+
 
 class HomePage extends StatefulWidget {
   @override
@@ -27,6 +32,16 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       _selectedIndex = index;
     });
+  }
+
+  Future<void> _logout() async {
+    final authService = Provider.of<AuthService>(context, listen: false);
+    await authService.logout();
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => LoginScreen()),
+      (route) => false,
+    );
   }
 
   @override
@@ -78,9 +93,7 @@ class _HomePageState extends State<HomePage> {
                     'Logout',
                     style: TextStyle(color: Colors.white),
                   ),
-                  onTap: () {
-                    // Acción de logout
-                  },
+                  onTap: _logout,
                 ),
               ],
             ),

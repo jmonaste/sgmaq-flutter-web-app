@@ -29,17 +29,28 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       navigatorKey: navigatorKey, // Asignar el navigatorKey
-      theme: ThemeData.dark().copyWith(
-        colorScheme: ColorScheme.dark().copyWith(
-          primary: Colors.blueAccent,
-        ),
-        scaffoldBackgroundColor: Color(0xFFF2F2F2),
-        elevatedButtonTheme: ElevatedButtonThemeData(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: Color(0xFFA64F03),
+      theme: ThemeData(
+          primarySwatch: Colors.blue,
+          brightness: Brightness.light, // Tema claro
+          scaffoldBackgroundColor: Colors.white,
+          appBarTheme: AppBarTheme(
+            color: Colors.white,
+            iconTheme: IconThemeData(color: Colors.black),
+          ),
+          elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue, // Color de fondo del botón
+              textStyle: TextStyle(color: Colors.white), // Color del texto del botón
+            ),
+          ),
+          inputDecorationTheme: InputDecorationTheme(
+            border: OutlineInputBorder(),
+            focusedBorder: OutlineInputBorder(
+              borderSide: BorderSide(color: Colors.blue),
+            ),
+            labelStyle: TextStyle(color: Colors.black),
           ),
         ),
-      ),
       home: AuthWrapper(), // Usar AuthWrapper como la pantalla inicial
     );
   }

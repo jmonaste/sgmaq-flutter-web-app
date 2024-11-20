@@ -1,4 +1,3 @@
-// FILE: types_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart'; // Asegúrate de importar tu servicio API
@@ -11,6 +10,9 @@ class TypesPage extends StatefulWidget {
 class _TypesPageState extends State<TypesPage> {
   List<Map<String, dynamic>> _types = [];
   bool _isLoading = true;
+  int _currentPage = 1;
+  final int _limit = 10;
+  final TextEditingController _nameController = TextEditingController();
 
   @override
   void initState() {
@@ -18,9 +20,10 @@ class _TypesPageState extends State<TypesPage> {
     _fetchTypes();
   }
 
-  Future<void> _fetchTypes() async {
+  Future<void> _fetchTypes({int page = 1}) async {
     final apiService = Provider.of<ApiService>(context, listen: false);
     try {
+      final skip = (page - 1) * _limit;
       final types = await apiService.getVehicleTypes();
       setState(() {
         _types = types;
@@ -30,16 +33,35 @@ class _TypesPageState extends State<TypesPage> {
       setState(() {
         _isLoading = false;
       });
-      // Manejar el error apropiadamente
       print('Error fetching vehicle types: $e');
-      _showErrorSnackbar('Error al obtener los tipos de vehículos.');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error al obtener los tipos de vehículos.')),
+      );
     }
   }
 
-  void _addType(Map<String, dynamic> type) {
-    setState(() {
-      _types.add(type);
-    });
+  Future<void> _addType() async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      try {
+        await apiService.createVehicleType(name);
+        _nameController.clear();
+        await _fetchTypes(page: _currentPage); // Refrescar la lista de tipos
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Tipo de vehículo agregado correctamente')),
+        );
+      } catch (e) {
+        print('Error adding type: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error agregando el tipo de vehículo')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('El nombre del tipo de vehículo no puede estar vacío')),
+      );
+    }
   }
 
   void _updateType(Map<String, dynamic> type) {
@@ -51,195 +73,259 @@ class _TypesPageState extends State<TypesPage> {
     });
   }
 
-  void _deleteType(int id) {
-    setState(() {
-      _types.removeWhere((t) => t['id'] == id);
-    });
+  Future<void> _deleteType(int id) async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    try {
+      await apiService.deleteVehicleType(id);
+      setState(() {
+        _types.removeWhere((t) => t['id'] == id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Tipo de vehículo eliminado correctamente')),
+      );
+    } catch (e) {
+      print('Error deleting type: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error eliminando el tipo de vehículo')),
+      );
+    }
   }
 
-  void _showErrorSnackbar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.redAccent,
+  Future<void> _confirmDeleteType(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmar eliminación'),
+        content: Text('¿Estás seguro de que deseas eliminar este tipo de vehículo?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Eliminar'),
+          ),
+        ],
       ),
     );
+    if (confirm == true) {
+      await _deleteType(id);
+    }
   }
 
-  void _showTypeForm({Map<String, dynamic>? type}) async {
-    final result = await showDialog<Map<String, dynamic>>(
+  Future<void> _showTypeFormDialog(Map<String, dynamic>? type) async {
+    final updatedType = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => TypeFormDialog(type: type),
     );
-
-    if (result != null) {
+    if (updatedType != null) {
       if (type == null) {
-        _addType(result);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Tipo agregado exitosamente.'),
-            backgroundColor: Colors.green,
-          ),
-        );
+        _addType();
       } else {
-        _updateType(result);
+        _updateType(updatedType);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Tipo actualizado exitosamente.'),
-            backgroundColor: Colors.green,
-          ),
+          SnackBar(content: Text('Tipo de vehículo actualizado correctamente')),
         );
       }
     }
   }
 
-
   @override
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
+
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Tipos de Vehículos',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: Colors.teal, // Color más suave y profesional
-        elevation: 4, // Añade una sombra sutil para profundidad
-        iconTheme: IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: () {
-              setState(() {
-                _isLoading = true;
-              });
-              _fetchTypes();
-            },
-            tooltip: 'Actualizar',
-          ),
-        ],
-      ),
-      backgroundColor: Colors.grey[50], // Fondo más claro y limpio
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          _showTypeForm();
-        },
-        backgroundColor: Colors.teal, // Consistente con el AppBar
-        tooltip: 'Agregar Tipo de Vehículo',
-        child: Icon(Icons.add, color: Colors.white),
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: BoxConstraints(maxWidth: 800), // Limita el ancho máximo
-          child: _isLoading
-              ? Center(
-                  child: CircularProgressIndicator(
-                    valueColor: AlwaysStoppedAnimation<Color>(Colors.teal),
-                  ),
-                )
-              : _types.isEmpty
-                  ? Center(
+      backgroundColor: Colors.white,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Título
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Text(
+                'Gestión de Tipos de Vehículos',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            // Descripción
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Text(
+                'Esta página permite gestionar los tipos de vehículos. Aquí puedes agregar, editar o eliminar tipos según sea necesario.',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            // Separador
+            Divider(color: Colors.grey),
+            SizedBox(height: 16),
+            // Tarjetas horizontales
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Primera tarjeta
+                Expanded(
+                  flex: 2,
+                  child: Card(
+                    color: Colors.white, // Fondo blanco para la tarjeta
+                    elevation: 4,
+                    margin: EdgeInsets.all(8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
                       child: Column(
-                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.info_outline, color: Colors.grey, size: 80),
-                          SizedBox(height: 16),
                           Text(
-                            'No hay tipos de vehículos disponibles.',
+                            'Listado de Tipos de Vehículos',
                             style: TextStyle(
-                              color: Colors.grey[700],
-                              fontSize: 16,
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
                             ),
+                          ),
+                          SizedBox(height: 8),
+                          _isLoading
+                              ? Center(child: CircularProgressIndicator())
+                              : Column(
+                                  children: [
+                                    ListView.builder(
+                                      shrinkWrap: true,
+                                      itemCount: _types.length,
+                                      itemBuilder: (context, index) {
+                                        final type = _types[index];
+                                        final isEven = index % 2 == 0;
+                                        return Container(
+                                          color: isEven ? Colors.white : Colors.grey[200],
+                                          child: ListTile(
+                                            title: Text(
+                                              type['type_name'],
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  icon: Icon(Icons.edit, color: Colors.blueAccent),
+                                                  onPressed: () => _showTypeFormDialog(type),
+                                                ),
+                                                IconButton(
+                                                  icon: Icon(Icons.delete, color: Colors.red),
+                                                  onPressed: () => _confirmDeleteType(type['id']),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                    _buildPagination(),
+                                  ],
+                                ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                // Segunda tarjeta
+                Expanded(
+                  flex: 1,
+                  child: Card(
+                    color: Colors.white, // Fondo blanco para la tarjeta
+                    elevation: 4,
+                    margin: EdgeInsets.all(8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Agregar un Tipo de Vehículo',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          TextField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Nombre',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _addType,
+                            child: Text('Agregar'),
                           ),
                         ],
                       ),
-                    )
-                  : Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: ListView.separated(
-                        itemCount: _types.length,
-                        separatorBuilder: (context, index) => SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final type = _types[index];
-                          return Card(
-                            color: Colors.teal[50], // Color de fondo suave
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            elevation: 3,
-                            child: ListTile(
-                              contentPadding: EdgeInsets.symmetric(
-                                  vertical: 8.0, horizontal: 16.0),
-                              title: Text(
-                                type['type_name'],
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.teal[800],
-                                ),
-                              ),
-                              trailing: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  IconButton(
-                                    icon: Icon(Icons.edit, color: Colors.orangeAccent),
-                                    onPressed: () {
-                                      _showTypeForm(type: type);
-                                    },
-                                    tooltip: 'Editar',
-                                  ),
-                                  IconButton(
-                                    icon: Icon(Icons.delete, color: Colors.redAccent),
-                                    onPressed: () async {
-                                      final confirm = await showDialog<bool>(
-                                        context: context,
-                                        builder: (context) => AlertDialog(
-                                          title: Text('Confirmar Eliminación'),
-                                          content: Text(
-                                              '¿Estás seguro de que deseas eliminar este tipo?'),
-                                          actions: [
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.of(context).pop(false),
-                                              child: Text('Cancelar'),
-                                            ),
-                                            TextButton(
-                                              onPressed: () =>
-                                                  Navigator.of(context).pop(true),
-                                              child: Text('Eliminar'),
-                                            ),
-                                          ],
-                                        ),
-                                      );
-                                      if (confirm != null && confirm) {
-                                        try {
-                                          await apiService.deleteVehicleType(type['id']);
-                                          _deleteType(type['id']);
-                                          ScaffoldMessenger.of(context).showSnackBar(
-                                            SnackBar(
-                                              content: Text(
-                                                  'Tipo eliminado exitosamente.'),
-                                              backgroundColor: Colors.green,
-                                            ),
-                                          );
-                                        } catch (e) {
-                                          _showErrorSnackbar(
-                                              'Error al eliminar el tipo.');
-                                        }
-                                      }
-                                    },
-                                    tooltip: 'Eliminar',
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
                     ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildPagination() {
+    return Container(
+      color: Colors.white,
+      padding: EdgeInsets.symmetric(vertical: 8.0),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          ElevatedButton(
+            onPressed: _currentPage > 1
+                ? () {
+                    setState(() {
+                      _currentPage--;
+                      _fetchTypes(page: _currentPage);
+                    });
+                  }
+                : null,
+            child: Text('Anterior'),
+          ),
+          SizedBox(width: 16),
+          Text(
+            'Página $_currentPage',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
+          SizedBox(width: 16),
+          ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _currentPage++;
+                _fetchTypes(page: _currentPage);
+              });
+            },
+            child: Text('Siguiente'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 }
 
@@ -254,155 +340,97 @@ class TypeFormDialog extends StatefulWidget {
 
 class _TypeFormDialogState extends State<TypeFormDialog> {
   final _formKey = GlobalKey<FormState>();
-  late String _name;
-  bool _isSaving = false; // Para mostrar un indicador de carga al guardar
+  final TextEditingController _nameController = TextEditingController();
+  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
-    _name = widget.type?['type_name'] ?? '';
+    _nameController.text = widget.type?['type_name'] ?? '';
+  }
+
+  Future<void> _saveType() async {
+    if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isSaving = true;
+      });
+      final apiService = Provider.of<ApiService>(context, listen: false);
+      try {
+        final type = {
+          'id': widget.type?['id'] ?? 0,
+          'type_name': _nameController.text.trim(),
+        };
+        if (widget.type == null) {
+          await apiService.createVehicleType(_nameController.text.trim());
+        } else {
+          await apiService.updateVehicleType(type['id'], _nameController.text.trim());
+        }
+        Navigator.pop(context, type);
+      } catch (e) {
+        print('Error saving type: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving type')),
+        );
+      } finally {
+        setState(() {
+          _isSaving = false;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final apiService = Provider.of<ApiService>(context, listen: false);
-    return Dialog(
-      insetPadding: EdgeInsets.all(16),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(24.0), // Espaciado interno
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                widget.type == null ? 'Agregar Tipo' : 'Editar Tipo',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.teal[800],
+    return AlertDialog(
+      title: Text(widget.type == null ? 'Agregar Tipo de Vehículo' : 'Editar Tipo de Vehículo'),
+      content: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: _nameController,
+              decoration: InputDecoration(
+                labelText: 'Nombre',
+                labelStyle: TextStyle(color: Colors.grey[700]),
+                filled: true,
+                fillColor: Colors.white,
+                contentPadding: EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                focusedBorder: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: BorderSide(color: Colors.blueAccent),
                 ),
               ),
-              SizedBox(height: 16),
-              Form(
-                key: _formKey,
-                child: TextFormField(
-                  initialValue: _name,
-                  decoration: InputDecoration(
-                    labelText: 'Nombre',
-                    labelStyle: TextStyle(color: Colors.teal[600]),
-                    filled: true,
-                    fillColor: Colors.grey[200],
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade400),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.teal),
-                    ),
-                    errorBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.redAccent),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingrese un nombre';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    _name = value!;
-                  },
-                ),
-              ),
-              SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () async {
-                          if (_formKey.currentState!.validate()) {
-                            _formKey.currentState!.save();
-                            setState(() {
-                              _isSaving = true;
-                            });
-                            final type = {
-                              'id': widget.type?['id'] ?? 0,
-                              'type_name': _name
-                            };
-                            try {
-                              if (widget.type == null) {
-                                final newType =
-                                    await apiService.createVehicleType(_name);
-                                //type['id'] = newType['id']; // Actualiza el ID
-                              } else {
-                                await apiService.updateVehicleType(
-                                    type['id'], _name);
-                              }
-                              setState(() {
-                                _isSaving = false;
-                              });
-                              Navigator.of(context).pop(type);
-                            } catch (e) {
-                              setState(() {
-                                _isSaving = false;
-                              });
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error al guardar el tipo.'),
-                                  backgroundColor: Colors.redAccent,
-                                ),
-                              );
-                            }
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal, // Consistente con el AppBar
-                    padding: EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                  ),
-                  child: _isSaving
-                      ? SizedBox(
-                          width: 24,
-                          height: 24,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : Text(
-                          widget.type == null ? 'Agregar' : 'Actualizar',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                ),
-              ),
-              SizedBox(height: 8),
-              TextButton(
-                onPressed: _isSaving
-                    ? null
-                    : () {
-                        Navigator.of(context).pop();
-                      },
-                child: Text(
-                  'Cancelar',
-                  style: TextStyle(color: Colors.teal),
-                ),
-              ),
-            ],
-          ),
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Por favor ingrese un nombre';
+                }
+                return null;
+              },
+            ),
+          ],
         ),
       ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text('Cancelar'),
+        ),
+        ElevatedButton(
+          onPressed: _isSaving ? null : _saveType,
+          child: _isSaving ? CircularProgressIndicator() : Text('Guardar'),
+        ),
+      ],
     );
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 }

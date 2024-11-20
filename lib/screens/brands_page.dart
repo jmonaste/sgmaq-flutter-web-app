@@ -1,7 +1,7 @@
-// FILE: brands_page.dart
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../services/api_service.dart'; // Asegúrate de importar tu servicio API
+import '../widgets/brand_form_dialog.dart'; // Importa el diálogo de formulario de marcas
 
 class BrandsPage extends StatefulWidget {
   @override
@@ -13,6 +13,7 @@ class _BrandsPageState extends State<BrandsPage> {
   bool _isLoading = true;
   int _currentPage = 1;
   final int _limit = 10;
+  final TextEditingController _nameController = TextEditingController();
 
   @override
   void initState() {
@@ -26,11 +27,7 @@ class _BrandsPageState extends State<BrandsPage> {
       final skip = (page - 1) * _limit;
       final brands = await apiService.getVehicleBrands(skip: skip, limit: _limit);
       setState(() {
-        if (page == 1) {
-          _brands = brands;
-        } else {
-          _brands = brands; // Reemplaza la lista por la página solicitada
-        }
+        _brands = brands;
         _isLoading = false;
       });
     } catch (e) {
@@ -41,10 +38,28 @@ class _BrandsPageState extends State<BrandsPage> {
     }
   }
 
-  void _addBrand(Map<String, dynamic> brand) {
-    setState(() {
-      _brands.add(brand);
-    });
+  Future<void> _addBrand() async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    final name = _nameController.text.trim();
+    if (name.isNotEmpty) {
+      try {
+        await apiService.createVehicleBrand(name);
+        _nameController.clear();
+        await _fetchBrands(page: _currentPage); // Refrescar la lista de marcas
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Marca agregada correctamente')),
+        );
+      } catch (e) {
+        print('Error adding brand: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error agregando la marca')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('El nombre de la marca no puede estar vacío')),
+      );
+    }
   }
 
   void _updateBrand(Map<String, dynamic> brand) {
@@ -56,96 +71,214 @@ class _BrandsPageState extends State<BrandsPage> {
     });
   }
 
-  void _deleteBrand(int id) {
-    setState(() {
-      _brands.removeWhere((b) => b['id'] == id);
-    });
+  Future<void> _deleteBrand(int id) async {
+    final apiService = Provider.of<ApiService>(context, listen: false);
+    try {
+      await apiService.deleteVehicleBrand(id);
+      setState(() {
+        _brands.removeWhere((b) => b['id'] == id);
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Marca eliminada correctamente')),
+      );
+    } catch (e) {
+      print('Error deleting brand: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error eliminando la marca')),
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteBrand(int id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Confirmar eliminación'),
+        content: Text('¿Estás seguro de que deseas eliminar esta marca?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: Text('Cancelar'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: Text('Eliminar'),
+          ),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      await _deleteBrand(id);
+    }
+  }
+
+  Future<void> _showBrandFormDialog(Map<String, dynamic>? brand) async {
+    final updatedBrand = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => BrandFormDialog(brand: brand),
+    );
+    if (updatedBrand != null) {
+      if (brand == null) {
+        _addBrand();
+      } else {
+        _updateBrand(updatedBrand);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Marca actualizada correctamente')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final apiService = Provider.of<ApiService>(context, listen: false);
-    final double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Marcas de Vehículos',
-          style: TextStyle(color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0, // Eliminamos la sombra para un diseño más plano
-        iconTheme: IconThemeData(color: Colors.black), // Iconos en negro
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final newBrand = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => BrandFormPage()),
-          );
-          if (newBrand != null) {
-            _addBrand(newBrand);
-          }
-        },
-        backgroundColor: Colors.blueAccent,
-        child: Icon(Icons.add),
-      ),
-      backgroundColor: Colors.grey[100],
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : Column(
+      backgroundColor: Colors.white,
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Título
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16.0),
+              child: Text(
+                'Gestión de Marcas',
+                style: TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            // Descripción
+            Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: Text(
+                'Esta página permite gestionar las marcas de vehículos. Aquí puedes agregar, editar o eliminar marcas según sea necesario.',
+                style: TextStyle(
+                  fontSize: 20,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+            // Separador
+            Divider(color: Colors.grey),
+            SizedBox(height: 16),
+            // Tarjetas horizontales
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Primera tarjeta
                 Expanded(
-                  child: ListView.builder(
-                    itemCount: _brands.length,
-                    itemBuilder: (context, index) {
-                      final brand = _brands[index];
-                      final isEven = index % 2 == 0;
-                      return Container(
-                        color: isEven ? Colors.white : Colors.grey[200],
-                        child: ListTile(
-                          title: Text(
-                            brand['name'],
+                  flex: 2,
+                  child: Card(
+                    color: Colors.white, // Fondo blanco para la tarjeta
+                    elevation: 4,
+                    margin: EdgeInsets.all(8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Listado de Marcas',
                             style: TextStyle(
+                              fontSize: 24,
                               fontWeight: FontWeight.bold,
                               color: Colors.black,
                             ),
                           ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon: Icon(Icons.edit, color: Colors.blueAccent),
-                                onPressed: () async {
-                                  final updatedBrand = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) =>
-                                          BrandFormPage(brand: brand),
+                          SizedBox(height: 8),
+                          _isLoading
+                              ? Center(child: CircularProgressIndicator())
+                              : Column(
+                                  children: [
+                                    ListView.builder(
+                                      shrinkWrap: true,
+                                      itemCount: _brands.length,
+                                      itemBuilder: (context, index) {
+                                        final brand = _brands[index];
+                                        final isEven = index % 2 == 0;
+                                        return Container(
+                                          color: isEven ? Colors.white : Colors.grey[200],
+                                          child: ListTile(
+                                            title: Text(
+                                              brand['name'],
+                                              style: TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            trailing: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                IconButton(
+                                                  icon: Icon(Icons.edit, color: Colors.blueAccent),
+                                                  onPressed: () => _showBrandFormDialog(brand),
+                                                ),
+                                                IconButton(
+                                                  icon: Icon(Icons.delete, color: Colors.red),
+                                                  onPressed: () => _confirmDeleteBrand(brand['id']),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      },
                                     ),
-                                  );
-                                  if (updatedBrand != null) {
-                                    _updateBrand(updatedBrand);
-                                  }
-                                },
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () async {
-                                  await apiService.deleteVehicleBrand(brand['id']);
-                                  _deleteBrand(brand['id']);
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
+                                    _buildPagination(),
+                                  ],
+                                ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
-                _buildPagination(),
+                // Segunda tarjeta
+                Expanded(
+                  flex: 1,
+                  child: Card(
+                    color: Colors.white, // Fondo blanco para la tarjeta
+                    elevation: 4,
+                    margin: EdgeInsets.all(8.0),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Agregar una Marca',
+                            style: TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          TextField(
+                            controller: _nameController,
+                            decoration: InputDecoration(
+                              labelText: 'Nombre',
+                              border: OutlineInputBorder(),
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: _addBrand,
+                            child: Text('Agregar'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -186,146 +319,10 @@ class _BrandsPageState extends State<BrandsPage> {
       ),
     );
   }
-}
-
-class BrandFormPage extends StatefulWidget {
-  final Map<String, dynamic>? brand;
-
-  BrandFormPage({this.brand});
 
   @override
-  _BrandFormPageState createState() => _BrandFormPageState();
-}
-
-class _BrandFormPageState extends State<BrandFormPage> {
-  final _formKey = GlobalKey<FormState>();
-  late String _name;
-  bool _isSaving = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _name = widget.brand?['name'] ?? '';
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final apiService = Provider.of<ApiService>(context, listen: false);
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.brand == null ? 'Agregar Marca' : 'Editar Marca',
-          style: TextStyle(color: Colors.black),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        iconTheme: IconThemeData(color: Colors.black),
-      ),
-      backgroundColor: Colors.grey[100],
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: EdgeInsets.all(24.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  widget.brand == null
-                      ? 'Nueva Marca de Vehículo'
-                      : 'Editar Marca de Vehículo',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                ),
-                SizedBox(height: 24),
-                TextFormField(
-                  initialValue: _name,
-                  decoration: InputDecoration(
-                    labelText: 'Nombre',
-                    labelStyle: TextStyle(color: Colors.grey[700]),
-                    filled: true,
-                    fillColor: Colors.white,
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 16, horizontal: 16),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(8),
-                      borderSide: BorderSide(color: Colors.blueAccent),
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Por favor ingrese un nombre';
-                    }
-                    return null;
-                  },
-                  onSaved: (value) {
-                    _name = value!;
-                  },
-                ),
-                SizedBox(height: 32),
-                Center(
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isSaving
-                          ? null
-                          : () async {
-                              if (_formKey.currentState!.validate()) {
-                                _formKey.currentState!.save();
-                                setState(() {
-                                  _isSaving = true;
-                                });
-                                final brand = {
-                                  'id': widget.brand?['id'] ?? 0,
-                                  'name': _name
-                                };
-                                if (widget.brand == null) {
-                                  await apiService.createVehicleBrand(_name);
-                                } else {
-                                  await apiService.updateVehicleBrand(
-                                      brand['id'], _name);
-                                }
-                                setState(() {
-                                  _isSaving = false;
-                                });
-                                Navigator.pop(context, brand);
-                              }
-                            },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: _isSaving
-                          ? SizedBox(
-                              width: 24,
-                              height: 24,
-                              child: CircularProgressIndicator(
-                                color: Colors.white,
-                                strokeWidth: 2,
-                              ),
-                            )
-                          : Text(
-                              widget.brand == null ? 'Agregar' : 'Actualizar',
-                              style: TextStyle(fontSize: 16),
-                            ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
   }
 }
